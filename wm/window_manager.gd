@@ -12,7 +12,8 @@ signal window_focused(id: String)
 
 
 func _ready() -> void:
-	Engine.register_singleton("WindowManager", self)
+	if not Engine.has_singleton("WindowManager"):
+		Engine.register_singleton("WindowManager", self)
 
 
 func open_app(scene_path: String, params: Dictionary = {}) -> String:

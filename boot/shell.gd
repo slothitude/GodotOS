@@ -4,6 +4,32 @@ extends Node
 
 const SHELL_VERSION := "0.4.0"
 
+# Preload all GC classes (avoids class_name scanning issues)
+const GCSettings = preload("res://core/settings.gd")
+const GCPermissionManager = preload("res://core/permission_manager.gd")
+const GCToolRegistry = preload("res://core/service_registry.gd")
+const GCCostTracker = preload("res://core/cost_tracker.gd")
+const GCConversationHistory = preload("res://core/conversation_history.gd")
+const GCContextManager = preload("res://core/context_manager.gd")
+const GCApiClient = preload("res://core/api_client.gd")
+const GCQueryEngine = preload("res://core/query_engine.gd")
+const GCBaseTool = preload("res://tools/base_tool.gd")
+const GCFileReadTool = preload("res://tools/file_read_tool.gd")
+const GCFileWriteTool = preload("res://tools/file_write_tool.gd")
+const GCFileEditTool = preload("res://tools/file_edit_tool.gd")
+const GCGlobTool = preload("res://tools/glob_tool.gd")
+const GCGrepTool = preload("res://tools/grep_tool.gd")
+const GCBashTool = preload("res://tools/bash_tool.gd")
+const GCWebSearchTool = preload("res://tools/web_search_tool.gd")
+const GCWebFetchTool = preload("res://tools/web_fetch_tool.gd")
+const GCAgentTool = preload("res://tools/agent_tool.gd")
+const GCPlanModeTool = preload("res://tools/plan_mode_tool.gd")
+const GCTaskTools = preload("res://tools/task_tools.gd")
+const GCScheduleTools = preload("res://tools/schedule_tools.gd")
+const GCSleepTool = preload("res://tools/sleep_tool.gd")
+const GCErrorMonitorTool = preload("res://tools/error_monitor_tool.gd")
+const GCWindowTool = preload("res://tools/window_tool.gd")
+
 @onready var window_manager: Node = $WindowManager
 @onready var taskbar: Control = $Taskbar
 @onready var wallpaper: ColorRect = $Wallpaper
@@ -95,6 +121,9 @@ func _boot_sequence() -> void:
 	Engine.register_singleton("StateEngine", state_engine)
 	Engine.register_singleton("BridgeClient", bridge_client)
 	Engine.register_singleton("WindowManager", window_manager)
+
+	# 11. Initialize taskbar
+	taskbar.setup(window_manager, command_bus, bridge_client)
 
 	print("[GodotOS] Boot complete. Shell is live.")
 	system_ready.emit()

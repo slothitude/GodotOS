@@ -4,9 +4,9 @@ extends Node
 ## Everything is a validated, logged, reversible command.
 
 var bridge: Node       # BridgeClient
-var registry: Node     # ServiceRegistry
+var registry: RefCounted  # GCToolRegistry
 var state: Node        # StateEngine
-var permissions: Node  # PermissionManager
+var permissions: RefCounted  # GCPermissionManager
 
 var _log: Array[Dictionary] = []
 var _pending: Dictionary = {}       # id → command
