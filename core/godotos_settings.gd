@@ -1,7 +1,6 @@
 class_name GCSettings
 extends RefCounted
-## Manages settings stored in a ConfigFile (adapted from GodotCode)
-## Replaces EditorSettings with user://godotos_settings.cfg
+## GodotOS-specific settings override — uses ConfigFile instead of EditorSettings
 
 const SETTINGS_PREFIX := "godotcode/"
 
@@ -151,3 +150,20 @@ func get_searxng_url() -> String:
 	if url.right(1) == "/":
 		url = url.left(url.length() - 1)
 	return url
+
+
+func get_nim_api_key() -> String:
+	## NVIDIA NIM API key — same as the main NVIDIA API key
+	return get_api_key()
+
+
+func get_image_gen_provider() -> String:
+	return str(get_setting("image_gen_provider", "nvidia"))
+
+
+func get_ollama_url() -> String:
+	return str(get_setting("ollama_url", "http://localhost:11434"))
+
+
+func get_image_gen_model() -> String:
+	return str(get_setting("image_gen_model", "black-forest-labs/flux.1-schnell"))

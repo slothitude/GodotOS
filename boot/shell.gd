@@ -2,33 +2,57 @@ extends Node
 ## GodotOS Shell — the desktop. This IS the OS.
 ## Boots fullscreen, initialises all core systems, owns the window manager.
 
-const SHELL_VERSION := "0.4.0"
+const SHELL_VERSION := "0.5.0"
 
-# Preload all GC classes (avoids class_name scanning issues)
-const GCSettings = preload("res://core/settings.gd")
-const GCPermissionManager = preload("res://core/permission_manager.gd")
-const GCToolRegistry = preload("res://core/service_registry.gd")
-const GCCostTracker = preload("res://core/cost_tracker.gd")
-const GCConversationHistory = preload("res://core/conversation_history.gd")
-const GCContextManager = preload("res://core/context_manager.gd")
-const GCApiClient = preload("res://core/api_client.gd")
-const GCQueryEngine = preload("res://core/query_engine.gd")
-const GCBaseTool = preload("res://tools/base_tool.gd")
-const GCFileReadTool = preload("res://tools/file_read_tool.gd")
-const GCFileWriteTool = preload("res://tools/file_write_tool.gd")
-const GCFileEditTool = preload("res://tools/file_edit_tool.gd")
-const GCGlobTool = preload("res://tools/glob_tool.gd")
-const GCGrepTool = preload("res://tools/grep_tool.gd")
-const GCBashTool = preload("res://tools/bash_tool.gd")
-const GCWebSearchTool = preload("res://tools/web_search_tool.gd")
-const GCWebFetchTool = preload("res://tools/web_fetch_tool.gd")
-const GCAgentTool = preload("res://tools/agent_tool.gd")
-const GCPlanModeTool = preload("res://tools/plan_mode_tool.gd")
-const GCTaskTools = preload("res://tools/task_tools.gd")
-const GCScheduleTools = preload("res://tools/schedule_tools.gd")
-const GCSleepTool = preload("res://tools/sleep_tool.gd")
-const GCErrorMonitorTool = preload("res://tools/error_monitor_tool.gd")
+# Submodule base path — all GodotCode files live here
+const GC := "res://addons/godotcode/addons/godotcode/"
+
+# GodotOS overrides (no EditorInterface deps)
+const GCSettings = preload("res://core/godotos_settings.gd")
+const GCContextManager = preload("res://core/godotos_context.gd")
+
+# GodotCode core — loaded directly from submodule
+const GCPermissionManager = preload(GC + "core/permission_manager.gd")
+const GCToolRegistry = preload(GC + "core/tool_registry.gd")
+const GCCostTracker = preload(GC + "core/cost_tracker.gd")
+const GCConversationHistory = preload(GC + "core/conversation_history.gd")
+const GCApiClient = preload(GC + "core/api_client.gd")
+const GCQueryEngine = preload(GC + "core/query_engine.gd")
+const GCMessageTypes = preload(GC + "core/message_types.gd")
+
+# GodotCode tools — loaded from submodule
+const GCBaseTool = preload(GC + "tools/base_tool.gd")
+const GCFileReadTool = preload(GC + "tools/file_read_tool.gd")
+const GCFileWriteTool = preload(GC + "tools/file_write_tool.gd")
+const GCFileEditTool = preload(GC + "tools/file_edit_tool.gd")
+const GCGlobTool = preload(GC + "tools/glob_tool.gd")
+const GCGrepTool = preload(GC + "tools/grep_tool.gd")
+const GCBashTool = preload(GC + "tools/bash_tool.gd")
+const GCWebSearchTool = preload(GC + "tools/web_search_tool.gd")
+const GCWebFetchTool = preload(GC + "tools/web_fetch_tool.gd")
+const GCAgentTool = preload(GC + "tools/agent_tool.gd")
+const GCPlanModeTool = preload(GC + "tools/plan_mode_tool.gd")
+const GCTaskTools = preload(GC + "tools/task_tools.gd")
+const GCScheduleTools = preload(GC + "tools/schedule_tools.gd")
+const GCSleepTool = preload(GC + "tools/sleep_tool.gd")
+const GCErrorMonitorTool = preload(GC + "tools/error_monitor_tool.gd")
+const GCImageGenTool = preload(GC + "tools/image_gen_tool.gd")
+const GCImageFetchTool = preload(GC + "tools/image_fetch_tool.gd")
+
+# GodotOS-specific tool
 const GCWindowTool = preload("res://tools/window_tool.gd")
+
+# GodotCode slash commands
+const GCBaseCommand = preload(GC + "commands/base_command.gd")
+const GCCommitCommand = preload(GC + "commands/commit_command.gd")
+const GCCompactCommand = preload(GC + "commands/compact_command.gd")
+const GCDoctorCommand = preload(GC + "commands/doctor_command.gd")
+const GCMemoryCommand = preload(GC + "commands/memory_command.gd")
+const GCReviewCommand = preload(GC + "commands/review_command.gd")
+
+# GodotCode UI (preloaded for AI console)
+const GCImageDisplay = preload(GC + "ui/image_display.gd")
+const GCMessageDisplay = preload(GC + "ui/message_display.gd")
 
 @onready var window_manager: Node = $WindowManager
 @onready var taskbar: Control = $Taskbar
@@ -51,6 +75,9 @@ var gc_query_engine  # GCQueryEngine
 var gc_conversation_history  # GCConversationHistory
 var gc_cost_tracker  # GCCostTracker
 var gc_context_manager  # GCContextManager
+
+# Slash commands
+var gc_commands: Dictionary = {}  # command_name -> GCBaseCommand
 
 signal system_ready
 signal service_failed(service_name: String, error: String)
@@ -114,8 +141,9 @@ func _boot_sequence() -> void:
 	# 9. GC subsystems (modeled on plugin.gd:_enter_tree)
 	_init_gc_subsystems()
 
-	# 10. Register tools in service registry
+	# 10. Register tools and commands
 	_register_tools()
+	_register_commands()
 
 	# Register globals (WindowManager self-registers in _ready)
 	Engine.register_singleton("CommandBus", command_bus)
@@ -140,24 +168,30 @@ func _load_env_api_key() -> void:
 		return
 	var api_key := ""
 	var model := ""
+	var nim_key := ""
 	while not f.eof_reached():
 		var line := f.get_line().strip_edges()
 		if line.begins_with("NVIDIA_API_KEY="):
 			api_key = line.substr(len("NVIDIA_API_KEY="))
 		elif line.begins_with("NVIDIA_MODEL="):
 			model = line.substr(len("NVIDIA_MODEL="))
+		elif line.begins_with("NVIDIA_NIM_API_KEY="):
+			nim_key = line.substr(len("NVIDIA_NIM_API_KEY="))
 	f.close()
 	if api_key == "":
 		return
-	gc_settings.set_setting(GCSettings.API_KEY, api_key)
-	gc_settings.set_setting(GCSettings.PROVIDER, "nvidia")
-	gc_settings.set_setting(GCSettings.BASE_URL, "https://integrate.api.nvidia.com")
+	gc_settings.set_setting("api_key", api_key)
+	gc_settings.set_setting("provider", "nvidia")
+	gc_settings.set_setting("base_url", "https://integrate.api.nvidia.com")
 	if model != "":
-		gc_settings.set_setting(GCSettings.MODEL, model)
+		gc_settings.set_setting("model", model)
 	else:
-		gc_settings.set_setting(GCSettings.MODEL, "moonshotai/kimi-k2.5")
-	gc_settings.set_setting(GCSettings.TEMPERATURE, 1.0)
-	gc_settings.set_setting(GCSettings.MAX_TOKENS, 16384)
+		gc_settings.set_setting("model", "moonshotai/kimi-k2.5")
+	gc_settings.set_setting("temperature", 1.0)
+	gc_settings.set_setting("max_tokens", 16384)
+	# If a separate NIM key is provided, store it for image gen
+	if nim_key != "":
+		gc_settings.set_setting("nim_api_key", nim_key)
 	print("[GodotOS] Configured NVIDIA provider from .env (model: %s)" % gc_settings.get_model())
 
 
@@ -201,6 +235,8 @@ func _register_tools() -> void:
 	var sleep_tool := GCSleepTool.new()
 	var error_monitor := GCErrorMonitorTool.new()
 	var window_tool := GCWindowTool.new()
+	var image_gen := GCImageGenTool.new()
+	var image_fetch := GCImageFetchTool.new()
 
 	service_registry.register(file_read)
 	service_registry.register(file_write)
@@ -217,8 +253,32 @@ func _register_tools() -> void:
 	service_registry.register(sleep_tool)
 	service_registry.register(error_monitor)
 	service_registry.register(window_tool)
+	service_registry.register(image_gen)
+	service_registry.register(image_fetch)
 
 	print("[GodotOS] Registered %d tools." % service_registry.get_tool_names().size())
+
+
+func _register_commands() -> void:
+	var cmd_context := {
+		"settings": gc_settings,
+		"conversation_history": gc_conversation_history,
+		"query_engine": gc_query_engine,
+		"tool_registry": service_registry,
+		"cost_tracker": gc_cost_tracker,
+	}
+
+	var commands := [
+		GCCommitCommand.new(),
+		GCCompactCommand.new(),
+		GCDoctorCommand.new(),
+		GCMemoryCommand.new(),
+		GCReviewCommand.new(),
+	]
+	for cmd in commands:
+		gc_commands[cmd.command_name] = cmd
+
+	print("[GodotOS] Registered %d slash commands." % gc_commands.size())
 
 
 func _launch_startup_apps() -> void:
@@ -232,7 +292,7 @@ func _launch_startup_apps() -> void:
 	var win = window_manager.get_window_by_id(win_id)
 	var win_node = win.get("node")
 	if win_node and win_node.has_method("setup"):
-		win_node.setup(gc_settings, gc_query_engine, gc_conversation_history, gc_cost_tracker)
+		win_node.setup(gc_settings, gc_query_engine, gc_conversation_history, gc_cost_tracker, gc_commands)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -253,6 +313,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("snapshot_save"):
 		snapshot_system.save_snapshot()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("open_editor"):
+		_launch_editor()
+		get_viewport().set_input_as_handled()
 
 
 func get_command_bus() -> Node:
@@ -260,3 +323,11 @@ func get_command_bus() -> Node:
 
 func get_state_engine() -> Node:
 	return state_engine
+
+
+func _launch_editor() -> void:
+	var win_id = window_manager.open_app("res://apps/editor/app_editor.tscn", {
+		"title": "Godot Editor",
+		"position": Vector2(200, 150),
+		"size": Vector2(500, 400),
+	})

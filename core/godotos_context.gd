@@ -1,7 +1,5 @@
-class_name GCContextManager
 extends RefCounted
-## Gather project context for the system prompt
-## Adapted from GodotCode — removed EditorInterface dependencies
+## GodotOS-specific context manager — removed EditorInterface dependencies
 
 
 func build_system_prompt() -> String:

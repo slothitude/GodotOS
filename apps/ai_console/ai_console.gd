@@ -1,14 +1,18 @@
 extends VBoxContainer
 ## AI Console — main chat interface for GodotOS
-## Adapted from GodotCode chat_panel.gd — removed @tool, EditorPlugin refs
+## GodotOS override of GodotCode's chat_panel.gd — no EditorPlugin refs
 
-var _query_engine: GCQueryEngine
-var _settings: GCSettings
-var _conversation_history: GCConversationHistory
-var _cost_tracker: GCCostTracker
+# Submodule base path
+const GC := "res://addons/godotcode/addons/godotcode/"
+
+var _query_engine  # GCQueryEngine
+var _settings  # GCSettings
+var _conversation_history  # GCConversationHistory
+var _cost_tracker  # GCCostTracker
 var _settings_dialog: AcceptDialog
 var _streaming_label: RichTextLabel
 var _is_streaming: bool = false
+var _commands: Dictionary = {}  # command_name -> GCBaseCommand
 
 @onready var _send_btn: Button = $InputArea/SendBtn
 @onready var _input_field: TextEdit = $InputArea/InputField
@@ -42,14 +46,16 @@ func _wire_query_engine() -> void:
 	_query_engine.query_error.connect(_on_query_error)
 	_query_engine.permission_requested.connect(_on_permission_requested)
 	_query_engine.status_update.connect(_on_status_update)
+	_query_engine.tool_vision_result.connect(_on_vision_result)
 
 
 ## Called by shell.gd after boot to wire in GC subsystems
-func setup(settings: GCSettings, query_engine: GCQueryEngine, conversation_history: GCConversationHistory, cost_tracker: GCCostTracker) -> void:
+func setup(settings, query_engine, conversation_history, cost_tracker, commands: Dictionary = {}) -> void:
 	_settings = settings
 	_query_engine = query_engine
 	_conversation_history = conversation_history
 	_cost_tracker = cost_tracker
+	_commands = commands
 	_wire_query_engine()
 	_load_conversation()
 
@@ -78,6 +84,11 @@ func _on_send() -> void:
 
 	_input_field.text = ""
 
+	# Check for slash commands
+	if text.begins_with("/"):
+		_handle_command(text)
+		return
+
 	# Add user message to display
 	_add_message_bubble("user", text)
 
@@ -85,6 +96,30 @@ func _on_send() -> void:
 	_is_streaming = true
 	_send_btn.disabled = true
 	_query_engine.submit_message(text)
+
+
+func _handle_command(text: String) -> void:
+	var parts := text.split(" ", false, 1)
+	var cmd_name := parts[0].substr(1)  # Remove leading /
+	var args := parts[1] if parts.size() > 1 else ""
+
+	if not _commands.has(cmd_name):
+		_add_message_bubble("system", "Unknown command: /%s\nAvailable: /%s" % [cmd_name, "\n/".join(_commands.keys())])
+		return
+
+	var cmd = _commands[cmd_name]
+	var context := {
+		"settings": _settings,
+		"conversation_history": _conversation_history,
+		"query_engine": _query_engine,
+		"tool_registry": _query_engine._tool_registry if _query_engine else null,
+		"cost_tracker": _cost_tracker,
+	}
+
+	_add_message_bubble("system", "Running /%s..." % cmd_name)
+	var result: Dictionary = cmd.execute(args, context)
+	if result.has("text"):
+		_add_message_bubble("system", result["text"])
 
 
 func _on_message_received(message: Dictionary) -> void:
@@ -141,6 +176,15 @@ func _on_permission_requested(tool_name: String, tool_input: Dictionary, callbac
 	add_child(dialog)
 	dialog.setup(tool_name, tool_input, callback)
 	dialog.popup_centered(Vector2i(500, 300))
+
+
+func _on_vision_result(tool_name: String, base64_data: String, media_type: String, description: String) -> void:
+	## Display an image result in the chat
+	var img_scene := preload("res://apps/ai_console/image_display.tscn").instantiate()
+	_message_list.add_child(img_scene)
+	img_scene.setup(base64_data, media_type, tool_name)
+	if description != "":
+		_add_message_bubble("assistant", description)
 
 
 func _add_message_bubble(role: String, text: String) -> void:

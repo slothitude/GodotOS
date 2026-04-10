@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://apps/ai_console/code_block.gd" id="1"]
+[ext_resource type="Script" path="res://addons/godotcode/addons/godotcode/ui/code_block.gd" id="1"]
 
 [node name="CodeBlock" type="PanelContainer"]
 custom_minimum_size = Vector2(0, 60)
