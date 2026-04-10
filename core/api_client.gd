@@ -49,6 +49,7 @@ func send_message_streaming(messages: Array, system_prompt: String, tools: Array
 		add_child(_http_request)
 
 	var json_body := JSON.stringify(body)
+	print("[APIClient] POST %s (provider=%s, model=%s, msgs=%d)" % [url, provider, _settings.get_model(), messages.size()])
 	var err := _http_request.request(url, headers, HTTPClient.METHOD_POST, json_body)
 	if err != OK:
 		_is_streaming = false
@@ -264,7 +265,9 @@ func _on_request_completed(result: int, code: int, _headers: PackedStringArray, 
 	_is_streaming = false
 
 	if result != HTTPRequest.RESULT_SUCCESS:
-		stream_error.emit({"message": "Request failed (result=%d)" % result})
+		var msg := "Request failed (result=%d)" % result
+		print("[APIClient] ERROR: %s" % msg)
+		stream_error.emit({"message": msg})
 		return
 
 	if code >= 400:
@@ -279,6 +282,8 @@ func _on_request_completed(result: int, code: int, _headers: PackedStringArray, 
 					error_msg = str(err.get("message", error_msg))
 				else:
 					error_msg = str(err)
+		print("[APIClient] ERROR: %s" % error_msg)
+		print("[APIClient] Response body: %s" % body_text.left(500))
 		stream_error.emit({"message": error_msg, "code": code})
 		return
 

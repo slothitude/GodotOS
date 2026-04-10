@@ -25,6 +25,9 @@ var _pending_tool_calls: Array = []  # {name, id, input}
 var _current_assistant: GCMessageTypes.AssistantMessage
 var _iteration_count: int = 0
 var _max_iterations: int = 50
+var _consecutive_tool_failures: int = 0
+var _max_consecutive_failures: int = 3
+var _tool_failed_this_round: bool = false
 
 
 func submit_message(prompt: String) -> void:
@@ -40,6 +43,7 @@ func submit_message(prompt: String) -> void:
 	var system_prompt := _build_system_prompt()
 
 	_iteration_count = 0
+	_consecutive_tool_failures = 0
 	_start_stream(system_prompt)
 
 
@@ -87,6 +91,12 @@ func _on_stream_tool_input(tool_use_id: String, partial_json: String) -> void:
 
 
 func _on_stream_complete(usage: Dictionary, stop_reason: String) -> void:
+	print("[QueryEngine] Stream complete (stop=%s, tools=%d, text=%d chars)" % [stop_reason, _pending_tool_calls.size(), _current_assistant.text_content.length() if _current_assistant else 0])
+	if _pending_tool_calls.size() > 0:
+		var names: Array = []
+		for tc in _pending_tool_calls:
+			names.append(tc.name)
+		print("[QueryEngine] Tool calls: %s" % str(names))
 	# Track costs
 	if _cost_tracker:
 		_cost_tracker.add_usage(usage)
@@ -131,6 +141,7 @@ func _on_stream_complete(usage: Dictionary, stop_reason: String) -> void:
 
 func _on_stream_error(error: Dictionary) -> void:
 	state = State.ERROR
+	print("[QueryEngine] Stream error: %s" % str(error))
 	query_error.emit(error)
 
 
@@ -184,11 +195,13 @@ func _execute_tool_calls_async() -> void:
 		return
 
 	status_update.emit("Executing tools...")
+	_tool_failed_this_round = false
 	for tc in _pending_tool_calls:
 		var tool: GCBaseTool = _tool_registry.get_tool(tc.name)
 
 		if not tool:
 			_conversation_history.add_tool_result(tc.id, "Unknown tool: %s" % tc.name, true)
+			_tool_failed_this_round = true
 			continue
 
 		# Check permissions
@@ -212,7 +225,23 @@ func _execute_tool_calls_async() -> void:
 			"allow":
 				await _execute_single_tool_async(tool, tc)
 
+	# Track consecutive failures
+	if _tool_failed_this_round:
+		_consecutive_tool_failures += 1
+	else:
+		_consecutive_tool_failures = 0
 	_pending_tool_calls.clear()
+
+	# Stop retrying after too many consecutive failures
+	if _consecutive_tool_failures >= _max_consecutive_failures:
+		print("[QueryEngine] %d consecutive tool failures — stopping" % _consecutive_tool_failures)
+		if _current_assistant:
+			_current_assistant.add_text("\n\n[Tool execution repeatedly failed — bridge may be offline or tools unavailable.]")
+		message_received.emit({"role": "assistant", "content": _current_assistant.text_content if _current_assistant else ""})
+		_conversation_history.save_to_file()
+		state = State.COMPLETE
+		query_complete.emit({"usage": {}, "stop_reason": "tool_failure"})
+		return
 
 	# Re-query with tool results
 	var system_prompt := _build_system_prompt()
@@ -254,8 +283,10 @@ func _execute_single_tool_async(tool: GCBaseTool, tool_call: Dictionary) -> void
 	stream_tool_call_received.emit(tool_call.name, tool_call.input)
 	var result = await tool.execute(tool_call.input, _build_context())
 
+	var success: bool = result.get("success", false) if result is Dictionary else false
+
 	# Check if tool returned vision content
-	if tool.has_vision_result(result) and result.get("success", false):
+	if tool.has_vision_result(result) and success:
 		var vision_blocks: Array = [
 			{
 				"type": "image",
@@ -278,6 +309,9 @@ func _execute_single_tool_async(tool: GCBaseTool, tool_call: Dictionary) -> void
 			tool_result.get("content", ""),
 			tool_result.get("is_error", false)
 		)
+	if not success:
+		_tool_failed_this_round = true
+		print("[QueryEngine] Tool '%s' failed: %s" % [tool_call.name, str(result.get("error", "unknown"))])
 
 
 func _build_system_prompt() -> String:
