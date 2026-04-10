@@ -26,7 +26,7 @@ const PROVIDER_DEFAULTS := {
 	"anthropic": {"base_url": "https://api.anthropic.com", "model": "claude-sonnet-4-20250514"},
 	"openai": {"base_url": "https://api.openai.com", "model": "gpt-4o"},
 	"openai_compatible": {"base_url": "http://localhost:11434", "model": "llama3"},
-	"nvidia": {"base_url": "https://integrate.api.nvidia.com", "model": "google/gemma-4-31b-it"},
+	"nvidia": {"base_url": "https://integrate.api.nvidia.com", "model": "moonshotai/kimi-k2.5"},
 }
 
 const DEFAULT_PROVIDER := "nvidia"

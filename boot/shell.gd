@@ -131,28 +131,34 @@ func _boot_sequence() -> void:
 
 
 func _load_env_api_key() -> void:
-	## Read API key from .env file if settings has none
-	if gc_settings.get_api_key() != "":
-		return
+	## Read NVIDIA config from .env file and force-apply settings
 	var env_path := ProjectSettings.globalize_path("res://.env")
 	if not FileAccess.file_exists(env_path):
 		return
 	var f := FileAccess.open(env_path, FileAccess.READ)
 	if not f:
 		return
+	var api_key := ""
+	var model := ""
 	while not f.eof_reached():
 		var line := f.get_line().strip_edges()
 		if line.begins_with("NVIDIA_API_KEY="):
-			var key := line.substr(len("NVIDIA_API_KEY="))
-			if key != "":
-				gc_settings.set_setting(GCSettings.API_KEY, key)
-				if gc_settings.get_provider() == "nvidia" or gc_settings.get_provider() == "":
-					gc_settings.set_setting(GCSettings.PROVIDER, "nvidia")
-					gc_settings.set_setting(GCSettings.MODEL, "google/gemma-4-31b-it")
-					gc_settings.set_setting(GCSettings.BASE_URL, "https://integrate.api.nvidia.com")
-				print("[GodotOS] Loaded NVIDIA API key from .env")
-			break
+			api_key = line.substr(len("NVIDIA_API_KEY="))
+		elif line.begins_with("NVIDIA_MODEL="):
+			model = line.substr(len("NVIDIA_MODEL="))
 	f.close()
+	if api_key == "":
+		return
+	gc_settings.set_setting(GCSettings.API_KEY, api_key)
+	gc_settings.set_setting(GCSettings.PROVIDER, "nvidia")
+	gc_settings.set_setting(GCSettings.BASE_URL, "https://integrate.api.nvidia.com")
+	if model != "":
+		gc_settings.set_setting(GCSettings.MODEL, model)
+	else:
+		gc_settings.set_setting(GCSettings.MODEL, "moonshotai/kimi-k2.5")
+	gc_settings.set_setting(GCSettings.TEMPERATURE, 1.0)
+	gc_settings.set_setting(GCSettings.MAX_TOKENS, 16384)
+	print("[GodotOS] Configured NVIDIA provider from .env (model: %s)" % gc_settings.get_model())
 
 
 func _init_gc_subsystems() -> void:
