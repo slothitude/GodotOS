@@ -1,0 +1,9 @@
+.godot/
+*.uid
+*.zip
+*.tar.gz
+godotcode_repo/
+godotos_src/
+.env
+*.pyc
+__pycache__/

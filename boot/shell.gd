@@ -69,6 +69,7 @@ func _boot_sequence() -> void:
 	# 1. GC Settings — first, many things depend on it
 	gc_settings = GCSettings.new()
 	gc_settings.initialize()
+	_load_env_api_key()
 
 	# 2. Permission manager
 	permission_manager = GCPermissionManager.new()
@@ -116,11 +117,10 @@ func _boot_sequence() -> void:
 	# 10. Register tools in service registry
 	_register_tools()
 
-	# Register globals
+	# Register globals (WindowManager self-registers in _ready)
 	Engine.register_singleton("CommandBus", command_bus)
 	Engine.register_singleton("StateEngine", state_engine)
 	Engine.register_singleton("BridgeClient", bridge_client)
-	Engine.register_singleton("WindowManager", window_manager)
 
 	# 11. Initialize taskbar
 	taskbar.setup(window_manager, command_bus, bridge_client)
@@ -128,6 +128,31 @@ func _boot_sequence() -> void:
 	print("[GodotOS] Boot complete. Shell is live.")
 	system_ready.emit()
 	_launch_startup_apps()
+
+
+func _load_env_api_key() -> void:
+	## Read API key from .env file if settings has none
+	if gc_settings.get_api_key() != "":
+		return
+	var env_path := ProjectSettings.globalize_path("res://.env")
+	if not FileAccess.file_exists(env_path):
+		return
+	var f := FileAccess.open(env_path, FileAccess.READ)
+	if not f:
+		return
+	while not f.eof_reached():
+		var line := f.get_line().strip_edges()
+		if line.begins_with("NVIDIA_API_KEY="):
+			var key := line.substr(len("NVIDIA_API_KEY="))
+			if key != "":
+				gc_settings.set_setting(GCSettings.API_KEY, key)
+				if gc_settings.get_provider() == "nvidia" or gc_settings.get_provider() == "":
+					gc_settings.set_setting(GCSettings.PROVIDER, "nvidia")
+					gc_settings.set_setting(GCSettings.MODEL, "google/gemma-4-31b-it")
+					gc_settings.set_setting(GCSettings.BASE_URL, "https://integrate.api.nvidia.com")
+				print("[GodotOS] Loaded NVIDIA API key from .env")
+			break
+	f.close()
 
 
 func _init_gc_subsystems() -> void:

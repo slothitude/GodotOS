@@ -19,18 +19,19 @@ const WEB_EYES_URL := "web_eyes_url"
 const SEARXNG_URL := "searxng_url"
 
 # Provider options
-const PROVIDERS := ["anthropic", "openai", "openai_compatible"]
+const PROVIDERS := ["anthropic", "openai", "openai_compatible", "nvidia"]
 
 # Per-provider defaults
 const PROVIDER_DEFAULTS := {
 	"anthropic": {"base_url": "https://api.anthropic.com", "model": "claude-sonnet-4-20250514"},
 	"openai": {"base_url": "https://api.openai.com", "model": "gpt-4o"},
 	"openai_compatible": {"base_url": "http://localhost:11434", "model": "llama3"},
+	"nvidia": {"base_url": "https://integrate.api.nvidia.com", "model": "google/gemma-4-31b-it"},
 }
 
-const DEFAULT_PROVIDER := "anthropic"
-const DEFAULT_MAX_TOKENS := 8192
-const DEFAULT_TEMPERATURE := 0.0
+const DEFAULT_PROVIDER := "nvidia"
+const DEFAULT_MAX_TOKENS := 16384
+const DEFAULT_TEMPERATURE := 1.0
 const DEFAULT_PERMISSION_MODE := "default"
 const DEFAULT_THEME := "dark"
 const DEFAULT_WEB_EYES_URL := "http://localhost:3000"
