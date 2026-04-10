@@ -1,0 +1,53 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://apps/ai_console/ai_console.gd" id="1"]
+
+[node name="AIConsole" type="VBoxContainer"]
+custom_minimum_size = Vector2(380, 400)
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1")
+
+[node name="Header" type="HBoxContainer" parent="."]
+
+[node name="Title" type="Label" parent="Header"]
+text = "GodotCode"
+horizontal_alignment = 0
+
+[node name="Spacer" type="Control" parent="Header"]
+size_flags_horizontal = 3
+
+[node name="SettingsBtn" type="Button" parent="Header"]
+text = "Settings"
+
+[node name="CostLabel" type="Label" parent="Header"]
+text = "$0.00"
+custom_minimum_size = Vector2(60, 0)
+horizontal_alignment = 2
+
+[node name="HSeparator" type="HSeparator" parent="."]
+
+[node name="MessageContainer" type="ScrollContainer" parent="."]
+size_flags_vertical = 3
+size_flags_stretch_ratio = 1.0
+
+[node name="MessageList" type="VBoxContainer" parent="MessageContainer"]
+size_flags_horizontal = 3
+
+[node name="HSeparator2" type="HSeparator" parent="."]
+
+[node name="InputArea" type="HBoxContainer" parent="."]
+
+[node name="InputField" type="TextEdit" parent="InputArea"]
+custom_minimum_size = Vector2(0, 60)
+size_flags_horizontal = 3
+placeholder_text = "Type a message..."
+wrap_mode = 2
+
+[node name="SendBtn" type="Button" parent="InputArea"]
+text = "Send"
+
+[node name="StatusBar" type="HBoxContainer" parent="."]
+
+[node name="StatusLabel" type="Label" parent="StatusBar"]
+text = "Ready"

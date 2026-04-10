@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://apps/ai_console/message_display.gd" id="1"]
+
+[node name="MessageDisplay" type="VBoxContainer"]
+size_flags_horizontal = 3
+script = ExtResource("1")
+
+[node name="RoleLabel" type="Label" parent="."]
+custom_minimum_size = Vector2(0, 20)
+
+[node name="Content" type="RichTextLabel" parent="."]
+fit_content = true
+bbcode_enabled = true
+scroll_following = true
+custom_minimum_size = Vector2(0, 40)
+size_flags_horizontal = 3

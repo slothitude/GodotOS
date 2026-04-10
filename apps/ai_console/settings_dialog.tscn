@@ -1,0 +1,61 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://apps/ai_console/settings_dialog.gd" id="1"]
+
+[node name="SettingsDialog" type="AcceptDialog"]
+title = "GodotOS Settings"
+size = Vector2i(450, 450)
+script = ExtResource("1")
+
+[node name="Content" type="VBoxContainer" parent="."]
+
+[node name="ProviderSection" type="VBoxContainer" parent="Content"]
+
+[node name="ProviderLabel" type="Label" parent="Content/ProviderSection"]
+text = "Provider:"
+
+[node name="ProviderOption" type="OptionButton" parent="Content/ProviderSection"]
+
+[node name="Spacer0" type="Control" parent="Content"]
+custom_minimum_size = Vector2(0, 10)
+
+[node name="ApiKeySection" type="VBoxContainer" parent="Content"]
+
+[node name="ApiKeyLabel" type="Label" parent="Content/ApiKeySection"]
+text = "API Key:"
+
+[node name="ApiKeyInput" type="LineEdit" parent="Content/ApiKeySection"]
+placeholder_text = "Enter your API key"
+secret = true
+
+[node name="Spacer1" type="Control" parent="Content"]
+custom_minimum_size = Vector2(0, 10)
+
+[node name="ModelSection" type="VBoxContainer" parent="Content"]
+
+[node name="ModelLabel" type="Label" parent="Content/ModelSection"]
+text = "Model:"
+
+[node name="ModelInput" type="LineEdit" parent="Content/ModelSection"]
+placeholder_text = "e.g. gpt-4o, claude-sonnet-4-20250514"
+
+[node name="Spacer2" type="Control" parent="Content"]
+custom_minimum_size = Vector2(0, 10)
+
+[node name="BaseUrlSection" type="VBoxContainer" parent="Content"]
+
+[node name="BaseUrlLabel" type="Label" parent="Content/BaseUrlSection"]
+text = "Base URL:"
+
+[node name="BaseUrlInput" type="LineEdit" parent="Content/BaseUrlSection"]
+placeholder_text = "https://api.openai.com"
+
+[node name="Spacer3" type="Control" parent="Content"]
+custom_minimum_size = Vector2(0, 10)
+
+[node name="PermissionSection" type="VBoxContainer" parent="Content"]
+
+[node name="PermissionLabel" type="Label" parent="Content/PermissionSection"]
+text = "Permission Mode:"
+
+[node name="PermissionOption" type="OptionButton" parent="Content/PermissionSection"]
