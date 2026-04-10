@@ -159,7 +159,7 @@ class SystemMessage:
 
 ## Deserialize any message from storage format
 static func from_storage(d: Dictionary) -> BaseMessage:
-	var msg_type := d.get("msg_type", d.get("role", ""))
+	var msg_type = d.get("msg_type", d.get("role", ""))
 	match msg_type:
 		"user":
 			return UserMessage.from_storage(d)

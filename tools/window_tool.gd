@@ -45,23 +45,23 @@ func execute(input: Dictionary, context: Dictionary) -> Dictionary:
 
 	match action:
 		"open":
-			var scene := input.get("scene", "")
+			var scene = input.get("scene", "")
 			var params := {
 				"title": input.get("title", "Untitled"),
 			}
-			var id := wm_node.open_app(scene, params)
+			var id = wm_node.open_app(scene, params)
 			return {"success": true, "data": {"window_id": id}}
 		"close":
-			var wid := input.get("window_id", "")
+			var wid = input.get("window_id", "")
 			wm_node.close_window(wid)
 			return {"success": true, "data": {"closed": wid}}
 		"focus":
-			var wid := input.get("window_id", "")
+			var wid = input.get("window_id", "")
 			wm_node.focus_window(wid)
 			return {"success": true, "data": {"focused": wid}}
 		"list":
-			var windows := wm_node.get_all_windows()
-			var result := []
+			var windows = wm_node.get_all_windows()
+			var result = []
 			for id in windows:
 				var w: Dictionary = windows[id]
 				result.append({"id": id, "scene": w.get("scene_path", ""), "title": w.get("params", {}).get("title", "")})

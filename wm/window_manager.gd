@@ -133,10 +133,10 @@ func focus_window(id: String) -> void:
 	var entry: Dictionary = _windows[id]
 	if entry.frame and is_instance_valid(entry.frame):
 		_set_frame_style(entry.frame, true)
-		var parent := entry.frame.get_parent()
+		var parent = entry.frame.get_parent()
 		if parent:
 			# Move just before Taskbar (last persistent node)
-			var taskbar_index := parent.get_child_count() - 1
+			var taskbar_index = parent.get_child_count() - 1
 			parent.move_child(entry.frame, taskbar_index - 1)
 
 	_focused_id = id
@@ -156,7 +156,7 @@ func _set_frame_style(frame: Control, focused: bool) -> void:
 	frame.add_theme_stylebox_override("panel", style)
 
 
-func get_window(id: String) -> Dictionary:
+func get_window_by_id(id: String) -> Dictionary:
 	return _windows.get(id, {})
 
 

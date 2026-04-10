@@ -71,7 +71,7 @@ func _dispatch(id: String, command: Dictionary) -> void:
 			result = await _handle_ai_command(command)
 		_:
 			# Try service registry for registered tools
-			var tool := registry.get_tool(command.target)
+			var tool = registry.get_tool(command.target)
 			if tool:
 				result = await tool.execute(command.params, _build_context())
 			else:

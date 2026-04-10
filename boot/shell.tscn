@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://boshell001"]
+[gd_scene load_steps=3 format=3 uid="uid://boshell001"]
 
 [ext_resource type="Script" path="res://boot/shell.gd" id="1"]
+[ext_resource type="Script" path="res://wm/window_manager.gd" id="2"]
 
 [node name="Shell" type="Node"]
 script = ExtResource("1")
@@ -14,7 +15,7 @@ grow_vertical = 2
 color = Color(0.08, 0.08, 0.12, 1)
 
 [node name="WindowManager" type="Node" parent="."]
-script = ExtResource("res://wm/window_manager.gd")
+script = ExtResource("2")
 
 [node name="Taskbar" type="HBoxContainer" parent="."]
 anchors_preset = 12

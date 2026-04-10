@@ -35,7 +35,7 @@ func execute(input: Dictionary, context: Dictionary) -> Dictionary:
 	var action: String = input.get("action", "get_errors")
 	var max_lines: int = mini(input.get("lines", 200), 500)
 
-	var log_lines := _read_log_file()
+	var log_lines = _read_log_file()
 	if log_lines == null:
 		return {"success": false, "error": "No editor log file found. The editor may not have generated logs yet."}
 

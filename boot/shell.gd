@@ -11,7 +11,7 @@ const SHELL_VERSION := "0.4.0"
 
 # Core systems — initialised in order
 var command_bus: Node
-var service_registry: Node  # GCToolRegistry
+var service_registry  # GCToolRegistry (RefCounted)
 var state_engine: Node
 var bridge_client: Node
 var watchdog: Node
@@ -19,12 +19,12 @@ var snapshot_system: Node
 var permission_manager: RefCounted  # GCPermissionManager
 
 # GodotCode subsystems
-var gc_settings: GCSettings
-var gc_api_client: GCApiClient
-var gc_query_engine: GCQueryEngine
-var gc_conversation_history: GCConversationHistory
-var gc_cost_tracker: GCCostTracker
-var gc_context_manager: GCContextManager
+var gc_settings  # GCSettings
+var gc_api_client  # GCApiClient
+var gc_query_engine  # GCQueryEngine
+var gc_conversation_history  # GCConversationHistory
+var gc_cost_tracker  # GCCostTracker
+var gc_context_manager  # GCContextManager
 
 signal system_ready
 signal service_failed(service_name: String, error: String)
@@ -55,7 +55,6 @@ func _boot_sequence() -> void:
 
 	# 4. Service registry (GCToolRegistry) — knows all available tools
 	service_registry = GCToolRegistry.new()
-	service_registry.name = "ServiceRegistry"
 
 	# 5. Bridge client — connects to Python daemon
 	bridge_client = preload("res://bridge/bridge_client.gd").new()
@@ -92,10 +91,10 @@ func _boot_sequence() -> void:
 	_register_tools()
 
 	# Register globals
-	Engine.set_singleton("CommandBus", command_bus)
-	Engine.set_singleton("StateEngine", state_engine)
-	Engine.set_singleton("BridgeClient", bridge_client)
-	Engine.set_singleton("WindowManager", window_manager)
+	Engine.register_singleton("CommandBus", command_bus)
+	Engine.register_singleton("StateEngine", state_engine)
+	Engine.register_singleton("BridgeClient", bridge_client)
+	Engine.register_singleton("WindowManager", window_manager)
 
 	print("[GodotOS] Boot complete. Shell is live.")
 	system_ready.emit()
@@ -164,15 +163,16 @@ func _register_tools() -> void:
 
 func _launch_startup_apps() -> void:
 	# Launch AI console on first run
-	var win_id := window_manager.open_app("res://apps/ai_console/ai_console.tscn", {
+	var win_id = window_manager.open_app("res://apps/ai_console/ai_console.tscn", {
 		"title": "GodotCode",
 		"position": Vector2(100, 80),
 		"size": Vector2(700, 600),
 	})
 	# Wire GC subsystems into the AI Console instance
-	var win: Dictionary = window_manager.get_window(win_id)
-	if win.node and win.node.has_method("setup"):
-		win.node.setup(gc_settings, gc_query_engine, gc_conversation_history, gc_cost_tracker)
+	var win = window_manager.get_window_by_id(win_id)
+	var win_node = win.get("node")
+	if win_node and win_node.has_method("setup"):
+		win_node.setup(gc_settings, gc_query_engine, gc_conversation_history, gc_cost_tracker)
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -49,7 +49,7 @@ func call_service(service: String, action: String, params: Dictionary = {}) -> D
 	}
 
 	_send_json(command)
-	var response := _read_json_response()
+	var response: Variant = await _read_json_response()
 	if response == null:
 		return {"error": "No response from bridge"}
 	if response.has("error"):
@@ -69,28 +69,28 @@ func _send_json(data: Dictionary) -> bool:
 
 func _read_json_response() -> Variant:
 	# Read header (4 bytes)
-	var header := _read_exact(4)
+	var header = await _read_exact(4)
 	if header == null:
 		return null
-	var length := header.decode_u32(0)
+	var length: int = header.decode_u32(0)
 	if length > 10_000_000:
 		push_error("[BridgeClient] Oversized response: %d bytes" % length)
 		return null
 
 	# Read body
-	var body := _read_exact(length)
+	var body = await _read_exact(length)
 	if body == null:
 		return null
 
-	var json_str := body.get_string_from_utf8()
-	var parsed := JSON.parse_string(json_str)
+	var json_str: String = body.get_string_from_utf8()
+	var parsed = JSON.parse_string(json_str)
 	if parsed == null:
 		push_error("[BridgeClient] Invalid JSON response")
 		return null
 	return parsed
 
 
-func _read_exact(bytes: int) -> PackedByteArray:
+func _read_exact(bytes: int) -> Variant:
 	var result := PackedByteArray()
 	result.resize(bytes)
 	var remaining := bytes
@@ -99,10 +99,10 @@ func _read_exact(bytes: int) -> PackedByteArray:
 	var timeout := Time.get_ticks_msec() + 5000
 	while remaining > 0:
 		_peer.poll()
-		var available := _peer.get_available_bytes()
+		var available: int = _peer.get_available_bytes()
 		if available > 0:
-			var to_read := mini(available, remaining)
-			var chunk := _peer.get_data(to_read)
+			var to_read: int = mini(available, remaining)
+			var chunk = _peer.get_data(to_read)
 			if chunk[0] != OK:
 				return null
 			for b in chunk[1]:
@@ -119,7 +119,7 @@ func _read_exact(bytes: int) -> PackedByteArray:
 	return result
 
 
-func is_connected() -> bool:
+func is_bridge_connected() -> bool:
 	return _connected
 
 
