@@ -102,6 +102,10 @@ func _set_fullscreen() -> void:
 	# Will be called again after settings are loaded
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, true)
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	# Set yin-yang window icon
+	var icon := Image.load_from_file("res://assets/icon.png")
+	if icon:
+		DisplayServer.window_set_icon(ImageTexture.create_from_image(icon))
 
 
 func _apply_shell_mode() -> void:

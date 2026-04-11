@@ -170,6 +170,7 @@ Apps are discovered via `apps/*/manifest.json`:
 | `Ctrl+G` | Toggle AI Console |
 | `Ctrl+S` | Save Snapshot |
 | `Ctrl+E` | Launch Godot Editor |
+| `Ctrl+B` | Open Google in default browser |
 
 ## Shell Modes
 
