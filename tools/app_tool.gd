@@ -1,11 +1,11 @@
 class_name GCAppTool
-extends RefCounted
+extends GCBaseTool
 ## App management tool for the AI agent
-## Lists, launches, and closes apps via AppLauncher.
 
-var tool_name := "App"
-var description := "List, launch, and close applications in GodotOS"
-var is_read_only := false
+
+func _init() -> void:
+	super("App", "List, launch, and close applications in GodotOS", {})
+	is_read_only = false
 
 
 func get_input_schema() -> Dictionary:

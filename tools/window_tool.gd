@@ -1,10 +1,11 @@
 class_name GCWindowTool
-extends RefCounted
+extends GCBaseTool
 ## Window management tool for the AI agent
 
-var tool_name := "Window"
-var description := "Open, close, and focus application windows in GodotOS"
-var is_read_only := false
+
+func _init() -> void:
+	super("Window", "Open, close, and focus application windows in GodotOS", {})
+	is_read_only = false
 
 
 func get_input_schema() -> Dictionary:

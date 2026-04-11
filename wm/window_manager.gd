@@ -220,7 +220,7 @@ func maximize_window(id: String) -> void:
 		entry["pre_maximize_size"] = entry.frame.size
 
 		# Maximize to fill screen (except taskbar height)
-		var screen_size := get_viewport_rect().size
+		var screen_size: Vector2 = get_viewport().get_visible_rect().size
 		entry.frame.position = Vector2.ZERO
 		entry.frame.size = Vector2(screen_size.x, screen_size.y - 48)
 

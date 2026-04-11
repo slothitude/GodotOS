@@ -153,7 +153,7 @@ func _on_query_complete(result: Dictionary) -> void:
 	_send_btn.disabled = false
 	_status_label.text = "Ready"
 	if _cost_tracker:
-		var cost := _cost_tracker.get_session_cost()
+		var cost: float = _cost_tracker.get_session_cost()
 		_cost_label.text = "$%.2f" % cost
 	_save_conversation()
 

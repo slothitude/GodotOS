@@ -154,8 +154,8 @@ func _process(_delta: float) -> void:
 
 
 func _attempt_reconnect() -> void:
-	if not _peer:
-		_peer = StreamPeerTCP.new()
+	# Create a fresh peer — old one may be in a non-NONE state
+	_peer = StreamPeerTCP.new()
 
 	var err := _peer.connect_to_host(_host, _port)
 	if err != OK:

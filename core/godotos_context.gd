@@ -1,4 +1,4 @@
-extends RefCounted
+extends GCContextManager
 ## GodotOS-specific context manager — removed EditorInterface dependencies
 
 

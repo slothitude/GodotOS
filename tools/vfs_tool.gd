@@ -1,11 +1,11 @@
 class_name GCVFSTool
-extends RefCounted
+extends GCBaseTool
 ## VFS navigation tool for the AI agent
-## Lets the agent resolve virtual paths, list mounts, and navigate the virtual filesystem.
 
-var tool_name := "VFS"
-var description := "Navigate the virtual filesystem in GodotOS — resolve paths, list mounts"
-var is_read_only := true
+
+func _init() -> void:
+	super("VFS", "Navigate the virtual filesystem in GodotOS — resolve paths, list mounts", {})
+	is_read_only = true
 
 
 func get_input_schema() -> Dictionary:

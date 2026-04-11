@@ -43,7 +43,7 @@ func _update_priorities() -> void:
 	if not _wm:
 		return
 
-	var focused_id := _wm.get_focused()
+	var focused_id: String = _wm.get_focused()
 	var windows = _wm.get_all_windows()
 
 	for win_id in windows:
