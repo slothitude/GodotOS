@@ -63,6 +63,7 @@ const GCMessageDisplay = preload(GC + "ui/message_display.gd")
 @onready var event_router: Node = $EventRouter
 @onready var launcher_overlay: Control = $LauncherOverlay
 @onready var startup_sound: AudioStreamPlayer = $StartupSound
+@onready var sound_manager: Node = $SoundManager
 
 # Core systems — initialised in order
 var command_bus: Node
@@ -222,11 +223,18 @@ func _boot_sequence() -> void:
 	# Connect WindowManager close signal to AppLauncher
 	window_manager.window_closed.connect(app_launcher.on_window_closed)
 
+	# Wire UI sounds via SoundManager
+	window_manager.window_opened.connect(func(_id, _p): sound_manager.play("open"))
+	window_manager.window_closed.connect(func(_id): sound_manager.play("close"))
+	window_manager.window_minimized.connect(func(_id): sound_manager.play("minimize"))
+	window_manager.window_maximized.connect(func(_id): sound_manager.play("maximize"))
+	window_manager.window_restored.connect(func(_id): sound_manager.play("restore"))
+
 	# Emit boot complete event
 	event_router.emit("shell.booted", {"version": SHELL_VERSION})
 
 	print("[GodotOS] Boot complete. Shell is live.")
-	startup_sound.play()
+	sound_manager.play("startup")
 	system_ready.emit()
 	_launch_startup_apps()
 
