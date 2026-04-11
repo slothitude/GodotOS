@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://boshell001"]
+[gd_scene load_steps=7 format=3 uid="uid://boshell001"]
 
 [ext_resource type="Script" path="res://boot/shell.gd" id="1"]
 [ext_resource type="Script" path="res://wm/window_manager.gd" id="2"]
 [ext_resource type="Script" path="res://wm/taskbar.gd" id="3"]
 [ext_resource type="Script" path="res://core/event_router.gd" id="4"]
 [ext_resource type="Script" path="res://wm/launcher.gd" id="5"]
+[ext_resource type="AudioStream" path="res://assets/sounds/startup.ogg" id="6"]
 
 [node name="Shell" type="Node"]
 script = ExtResource("1")
@@ -42,6 +43,10 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("5")
+
+[node name="StartupSound" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("6")
+bus = "Master"
 
 [node name="NotificationLayer" type="CanvasLayer" parent="."]
 layer = 10

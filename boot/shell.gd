@@ -62,6 +62,7 @@ const GCMessageDisplay = preload(GC + "ui/message_display.gd")
 @onready var notification_layer: CanvasLayer = $NotificationLayer
 @onready var event_router: Node = $EventRouter
 @onready var launcher_overlay: Control = $LauncherOverlay
+@onready var startup_sound: AudioStreamPlayer = $StartupSound
 
 # Core systems — initialised in order
 var command_bus: Node
@@ -225,6 +226,7 @@ func _boot_sequence() -> void:
 	event_router.emit("shell.booted", {"version": SHELL_VERSION})
 
 	print("[GodotOS] Boot complete. Shell is live.")
+	startup_sound.play()
 	system_ready.emit()
 	_launch_startup_apps()
 
