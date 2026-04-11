@@ -414,6 +414,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("open_editor"):
 		_launch_editor()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("open_browser"):
+		OS.shell_open("https://www.google.com")
+		get_viewport().set_input_as_handled()
 
 
 func get_command_bus() -> Node:

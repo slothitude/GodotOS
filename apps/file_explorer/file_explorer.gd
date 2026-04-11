@@ -130,9 +130,22 @@ func _on_item_activated(index: int) -> void:
 			new_path += name
 			_navigate_to(new_path)
 		else:
-			# File — could open in editor or show info
+			# File — open with OS default app
 			var name: String = meta.get("name", "")
-			_info_label.text = "File: %s (%d bytes)" % [name, meta.get("size", 0)]
+			var host_path := _current_path
+			if _vfs:
+				host_path = _vfs.resolve(host_path)
+			if not host_path.ends_with("/"):
+				host_path += "/"
+			host_path += name
+			if _bridge and _bridge.is_bridge_connected():
+				var result = await _bridge.call_service("process", "open", {"path": host_path})
+				if result.has("error"):
+					_info_label.text = "Open failed: %s" % result.error
+				else:
+					_info_label.text = "Opened: %s" % name
+			else:
+				_info_label.text = "Cannot open — bridge offline"
 
 
 func _on_item_clicked(index: int, _at: Vector2, _mouse_btn: int) -> void:

@@ -97,6 +97,17 @@ class ProcessService:
         except PermissionError:
             return {"error": f"Permission denied for process {pid}"}
 
+    async def open(self, path: str) -> dict:
+        """Open a file or URL with the OS default application."""
+        try:
+            if IS_WINDOWS:
+                os.startfile(path)
+            else:
+                await asyncio.create_subprocess_exec("xdg-open", path)
+            return {"opened": path}
+        except Exception as e:
+            return {"error": str(e)}
+
     async def info(self, pid: int) -> dict:
         """Get info about a specific process."""
         if IS_WINDOWS:
