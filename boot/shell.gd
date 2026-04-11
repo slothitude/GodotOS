@@ -105,7 +105,7 @@ func _set_fullscreen() -> void:
 	# Set yin-yang window icon
 	var icon := Image.load_from_file("res://assets/icon.png")
 	if icon:
-		DisplayServer.window_set_icon(ImageTexture.create_from_image(icon))
+		DisplayServer.set_icon(icon)
 
 
 func _apply_shell_mode() -> void:

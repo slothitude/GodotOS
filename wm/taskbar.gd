@@ -153,7 +153,7 @@ func _ready() -> void:
 	# Launcher button (grid icon)
 	var launcher_btn := Button.new()
 	launcher_btn.name = "LauncherBtn"
-	launcher_btn.text = "⊞"
+	launcher_btn.text = "☯"
 	launcher_btn.flat = true
 	launcher_btn.add_theme_color_override("font_color", TEXT_COLOR)
 	launcher_btn.add_theme_color_override("font_hover_color", Color.WHITE)
