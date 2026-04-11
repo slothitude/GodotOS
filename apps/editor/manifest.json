@@ -1,0 +1,7 @@
+{
+  "id": "editor",
+  "name": "Godot Editor",
+  "scene": "res://apps/editor/app_editor.tscn",
+  "permissions": ["process.spawn"],
+  "default_size": [500, 400]
+}

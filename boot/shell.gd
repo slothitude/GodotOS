@@ -2,7 +2,7 @@ extends Node
 ## GodotOS Shell — the desktop. This IS the OS.
 ## Boots fullscreen, initialises all core systems, owns the window manager.
 
-const SHELL_VERSION := "0.5.0"
+const SHELL_VERSION := "1.0.0"
 
 # Submodule base path — all GodotCode files live here
 const GC := "res://addons/godotcode/addons/godotcode/"
@@ -39,8 +39,10 @@ const GCErrorMonitorTool = preload(GC + "tools/error_monitor_tool.gd")
 const GCImageGenTool = preload(GC + "tools/image_gen_tool.gd")
 const GCImageFetchTool = preload(GC + "tools/image_fetch_tool.gd")
 
-# GodotOS-specific tool
+# GodotOS-specific tools
 const GCWindowTool = preload("res://tools/window_tool.gd")
+const GCAppTool = preload("res://tools/app_tool.gd")
+const GCVFSTool = preload("res://tools/vfs_tool.gd")
 
 # GodotCode slash commands
 const GCBaseCommand = preload(GC + "commands/base_command.gd")
@@ -58,6 +60,8 @@ const GCMessageDisplay = preload(GC + "ui/message_display.gd")
 @onready var taskbar: Control = $Taskbar
 @onready var wallpaper: ColorRect = $Wallpaper
 @onready var notification_layer: CanvasLayer = $NotificationLayer
+@onready var event_router: Node = $EventRouter
+@onready var launcher_overlay: Control = $LauncherOverlay
 
 # Core systems — initialised in order
 var command_bus: Node
@@ -67,6 +71,11 @@ var bridge_client: Node
 var watchdog: Node
 var snapshot_system: Node
 var permission_manager: RefCounted  # GCPermissionManager
+var input_router: Node
+var virtual_fs: Node
+var app_launcher: Node
+var window_scheduler: Node
+var os_adapter: Node
 
 # GodotCode subsystems
 var gc_settings  # GCSettings
@@ -87,8 +96,28 @@ func _ready() -> void:
 	_boot_sequence()
 
 func _set_fullscreen() -> void:
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	# Apply shell mode (soft/hard/fullscreen) — needs gc_settings initialized first
+	# Will be called again after settings are loaded
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, true)
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
+
+func _apply_shell_mode() -> void:
+	# Read shell mode from settings
+	if gc_settings and gc_settings.has_method("get_shell_mode"):
+		var mode: String = gc_settings.get_shell_mode()
+		match mode:
+			"fullscreen":
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+				DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, true)
+			"hard":
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+				DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, true)
+			"soft":
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+				DisplayServer.window_set_size(Vector2i(1280, 720))
+				DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
+		print("[GodotOS] Shell mode: %s" % mode)
 
 func _boot_sequence() -> void:
 	print("[GodotOS %s] Boot sequence starting..." % SHELL_VERSION)
@@ -97,26 +126,38 @@ func _boot_sequence() -> void:
 	gc_settings = GCSettings.new()
 	gc_settings.initialize()
 	_load_env_api_key()
+	_apply_shell_mode()
 
-	# 2. Permission manager
+	# 2. OS Adapter — platform detection
+	os_adapter = preload("res://core/os_adapter.gd").new()
+	os_adapter.name = "OSAdapter"
+	add_child(os_adapter)
+	Engine.register_singleton("OSAdapter", os_adapter)
+
+	# 3. Permission manager
 	permission_manager = GCPermissionManager.new()
 	permission_manager._settings = gc_settings
 
-	# 3. State engine — world model
+	# 4. EventRouter — pub/sub event system
+	# (already added as child node in scene tree)
+	Engine.register_singleton("EventRouter", event_router)
+	print("[GodotOS] EventRouter initialized.")
+
+	# 4. State engine — world model
 	state_engine = preload("res://core/state_engine.gd").new()
 	state_engine.name = "StateEngine"
 	add_child(state_engine)
 
-	# 4. Service registry (GCToolRegistry) — knows all available tools
+	# 5. Service registry (GCToolRegistry) — knows all available tools
 	service_registry = GCToolRegistry.new()
 
-	# 5. Bridge client — connects to Python daemon
+	# 6. Bridge client — connects to Python daemon
 	bridge_client = preload("res://bridge/bridge_client.gd").new()
 	bridge_client.name = "BridgeClient"
 	add_child(bridge_client)
 	await bridge_client.connect_to_bridge()
 
-	# 6. Command bus — all actions route through here
+	# 7. Command bus — all actions route through here
 	command_bus = preload("res://core/command_bus.gd").new()
 	command_bus.name = "CommandBus"
 	command_bus.bridge = bridge_client
@@ -125,23 +166,43 @@ func _boot_sequence() -> void:
 	command_bus.permissions = permission_manager
 	add_child(command_bus)
 
-	# 7. Snapshot system
+	# 8. Snapshot system
 	snapshot_system = preload("res://core/snapshot_system.gd").new()
 	snapshot_system.name = "SnapshotSystem"
 	snapshot_system.state_engine = state_engine
 	add_child(snapshot_system)
 
-	# 8. Watchdog
+	# 9. Watchdog
 	watchdog = preload("res://core/watchdog.gd").new()
 	watchdog.name = "Watchdog"
 	watchdog.command_bus = command_bus
 	watchdog.bridge_client = bridge_client
 	add_child(watchdog)
 
-	# 9. GC subsystems (modeled on plugin.gd:_enter_tree)
+	# 10. InputRouter — unified input routing
+	input_router = preload("res://core/input_router.gd").new()
+	input_router.name = "InputRouter"
+	add_child(input_router)
+
+	# 11. VirtualFS — virtual path mapping
+	virtual_fs = preload("res://core/virtual_filesystem.gd").new()
+	virtual_fs.name = "VirtualFS"
+	add_child(virtual_fs)
+
+	# 12. AppLauncher — discovers and launches apps
+	app_launcher = preload("res://core/app_launcher.gd").new()
+	app_launcher.name = "AppLauncher"
+	add_child(app_launcher)
+
+	# 13. WindowScheduler — per-window FPS/priority
+	window_scheduler = preload("res://core/window_scheduler.gd").new()
+	window_scheduler.name = "WindowScheduler"
+	add_child(window_scheduler)
+
+	# 14. GC subsystems (modeled on plugin.gd:_enter_tree)
 	_init_gc_subsystems()
 
-	# 10. Register tools and commands
+	# 15. Register tools and commands
 	_register_tools()
 	_register_commands()
 
@@ -149,9 +210,19 @@ func _boot_sequence() -> void:
 	Engine.register_singleton("CommandBus", command_bus)
 	Engine.register_singleton("StateEngine", state_engine)
 	Engine.register_singleton("BridgeClient", bridge_client)
+	Engine.register_singleton("InputRouter", input_router)
+	Engine.register_singleton("VirtualFS", virtual_fs)
+	Engine.register_singleton("AppLauncher", app_launcher)
+	Engine.register_singleton("WindowScheduler", window_scheduler)
 
-	# 11. Initialize taskbar
+	# 16. Initialize taskbar
 	taskbar.setup(window_manager, command_bus, bridge_client)
+
+	# Connect WindowManager close signal to AppLauncher
+	window_manager.window_closed.connect(app_launcher.on_window_closed)
+
+	# Emit boot complete event
+	event_router.emit("shell.booted", {"version": SHELL_VERSION})
 
 	print("[GodotOS] Boot complete. Shell is live.")
 	system_ready.emit()
@@ -235,6 +306,8 @@ func _register_tools() -> void:
 	var sleep_tool := GCSleepTool.new()
 	var error_monitor := GCErrorMonitorTool.new()
 	var window_tool := GCWindowTool.new()
+	var app_tool := GCAppTool.new()
+	var vfs_tool := GCVFSTool.new()
 	var image_gen := GCImageGenTool.new()
 	var image_fetch := GCImageFetchTool.new()
 
@@ -253,6 +326,8 @@ func _register_tools() -> void:
 	service_registry.register(sleep_tool)
 	service_registry.register(error_monitor)
 	service_registry.register(window_tool)
+	service_registry.register(app_tool)
+	service_registry.register(vfs_tool)
 	service_registry.register(image_gen)
 	service_registry.register(image_fetch)
 
@@ -297,10 +372,21 @@ func _launch_startup_apps() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("open_terminal"):
-		print("[GodotOS] Terminal not yet implemented")
+		if app_launcher:
+			if app_launcher.is_running("terminal"):
+				# Focus existing terminal
+				var win_id = app_launcher.get_window_id("terminal")
+				if win_id != "":
+					window_manager.focus_window(win_id)
+			else:
+				app_launcher.launch("terminal")
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("open_launcher"):
-		print("[GodotOS] Launcher not yet implemented")
+		if launcher_overlay:
+			if launcher_overlay.is_launcher_visible():
+				launcher_overlay.hide_launcher()
+			else:
+				launcher_overlay.show_launcher()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("toggle_ai_console"):
 		if Engine.has_singleton("AIConsole"):
@@ -311,7 +397,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				console.show()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("snapshot_save"):
-		snapshot_system.save_snapshot()
+		var result = snapshot_system.save_snapshot()
+		if result.has("ok"):
+			print("[GodotOS] Snapshot saved: %s" % result.get("name", ""))
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("open_editor"):
 		_launch_editor()

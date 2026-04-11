@@ -1,0 +1,7 @@
+{
+  "id": "ai_console",
+  "name": "GodotCode AI",
+  "scene": "res://apps/ai_console/ai_console.tscn",
+  "permissions": [],
+  "default_size": [700, 600]
+}

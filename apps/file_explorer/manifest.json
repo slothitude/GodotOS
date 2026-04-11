@@ -1,0 +1,7 @@
+{
+  "id": "file_explorer",
+  "name": "File Explorer",
+  "scene": "res://apps/file_explorer/file_explorer.tscn",
+  "permissions": ["fs"],
+  "default_size": [700, 500]
+}

@@ -1,0 +1,7 @@
+{
+  "id": "terminal",
+  "name": "Terminal",
+  "scene": "res://apps/terminal/terminal.tscn",
+  "permissions": ["process.spawn"],
+  "default_size": [800, 500]
+}

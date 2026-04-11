@@ -150,6 +150,19 @@ func _ready() -> void:
 	_ai_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ai_zone.add_child(_ai_label)
 
+	# Launcher button (grid icon)
+	var launcher_btn := Button.new()
+	launcher_btn.name = "LauncherBtn"
+	launcher_btn.text = "⊞"
+	launcher_btn.flat = true
+	launcher_btn.add_theme_color_override("font_color", TEXT_COLOR)
+	launcher_btn.add_theme_color_override("font_hover_color", Color.WHITE)
+	launcher_btn.add_theme_font_size_override("font_size", 18)
+	launcher_btn.custom_minimum_size = Vector2(36, 36)
+	launcher_btn.tooltip_text = "App Launcher (Super+Space)"
+	launcher_btn.pressed.connect(_on_launcher_pressed)
+	ai_zone.add_child(launcher_btn)
+
 	# ── Zone 2: Window Dots (center, flex) ──
 	_pill_container = HBoxContainer.new()
 	_pill_container.name = "WindowDots"
@@ -406,3 +419,12 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
 		if _glow_line:
 			_glow_line.size.x = size.x
+
+
+func _on_launcher_pressed() -> void:
+	var shell = get_tree().root.get_node_or_null("Shell")
+	if shell and shell.launcher_overlay:
+		if shell.launcher_overlay.is_launcher_visible():
+			shell.launcher_overlay.hide_launcher()
+		else:
+			shell.launcher_overlay.show_launcher()

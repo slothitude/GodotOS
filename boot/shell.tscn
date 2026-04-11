@@ -1,8 +1,10 @@
-[gd_scene load_steps=4 format=3 uid="uid://boshell001"]
+[gd_scene load_steps=6 format=3 uid="uid://boshell001"]
 
 [ext_resource type="Script" path="res://boot/shell.gd" id="1"]
 [ext_resource type="Script" path="res://wm/window_manager.gd" id="2"]
 [ext_resource type="Script" path="res://wm/taskbar.gd" id="3"]
+[ext_resource type="Script" path="res://core/event_router.gd" id="4"]
+[ext_resource type="Script" path="res://wm/launcher.gd" id="5"]
 
 [node name="Shell" type="Node"]
 script = ExtResource("1")
@@ -14,6 +16,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.08, 0.08, 0.12, 1)
+
+[node name="EventRouter" type="Node" parent="."]
+script = ExtResource("4")
 
 [node name="WindowManager" type="Node" parent="."]
 script = ExtResource("2")
@@ -28,6 +33,15 @@ offset_top = -48.0
 offset_left = 0.0
 offset_right = 0.0
 grow_vertical = 0
+
+[node name="LauncherOverlay" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5")
 
 [node name="NotificationLayer" type="CanvasLayer" parent="."]
 layer = 10

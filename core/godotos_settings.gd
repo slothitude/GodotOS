@@ -36,6 +36,11 @@ const DEFAULT_THEME := "dark"
 const DEFAULT_WEB_EYES_URL := "http://localhost:3000"
 const DEFAULT_SEARXNG_URL := "http://localhost:8889"
 
+# Shell modes: "soft" = windowed overlay, "hard" = fullscreen shell, "fullscreen" = borderless fullscreen
+const SHELL_MODE := "shell_mode"
+const SHELL_MODES := ["soft", "hard", "fullscreen"]
+const DEFAULT_SHELL_MODE := "fullscreen"
+
 var _config: ConfigFile
 var _config_path := "user://godotos_settings.cfg"
 
@@ -74,6 +79,8 @@ func _ensure_defaults() -> void:
 		set_setting(WEB_EYES_URL, DEFAULT_WEB_EYES_URL)
 	if not _has_setting(SEARXNG_URL):
 		set_setting(SEARXNG_URL, DEFAULT_SEARXNG_URL)
+	if not _has_setting(SHELL_MODE):
+		set_setting(SHELL_MODE, DEFAULT_SHELL_MODE)
 
 
 func _has_setting(key: String) -> bool:
@@ -163,6 +170,10 @@ func get_image_gen_provider() -> String:
 
 func get_ollama_url() -> String:
 	return str(get_setting("ollama_url", "http://localhost:11434"))
+
+
+func get_shell_mode() -> String:
+	return str(get_setting(SHELL_MODE, DEFAULT_SHELL_MODE))
 
 
 func get_image_gen_model() -> String:

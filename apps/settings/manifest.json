@@ -1,0 +1,7 @@
+{
+  "id": "settings",
+  "name": "Settings",
+  "scene": "res://apps/settings/system_settings.tscn",
+  "permissions": [],
+  "default_size": [500, 550]
+}

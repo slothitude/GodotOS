@@ -12,7 +12,7 @@ config_version=5
 
 config/name="GodotOS"
 config/description="AI-native graphical operating shell"
-config/version="0.5.0"
+config/version="1.0.0"
 run/main_scene="res://boot/shell.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://assets/icon.svg"

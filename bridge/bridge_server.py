@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
 GodotOS Bridge Server
-Runs as a background daemon. Godot connects via Unix socket.
-Handles all Linux system operations — filesystem, processes, network, system info.
+Runs as a background daemon. Godot connects via TCP.
+Handles all system operations — filesystem, processes, network, system info.
 
-GodotOS → [Unix socket] → bridge_server.py → Linux
+Linux:  Unix socket + TCP adapter (for GDScript StreamPeerTCP)
+Windows: TCP only (no Unix socket support)
 """
 
 import asyncio
@@ -25,8 +26,12 @@ from services.system_service import SystemService
 from services.network_service import NetworkService
 
 SOCKET_PATH = "/tmp/godotos_bridge.sock"
-LOG_PATH = os.path.expanduser("~/.local/share/godotos/bridge.log")
-VERSION = "0.4.0"
+TCP_HOST = "127.0.0.1"
+TCP_PORT = 47625
+
+LOG_DIR = os.path.expanduser("~/.local/share/godotos") if sys.platform != "win32" else os.path.expanduser("~/AppData/Local/godotos")
+LOG_PATH = os.path.join(LOG_DIR, "bridge.log")
+VERSION = "0.6.0"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -116,22 +121,28 @@ class BridgeServer:
             await asyncio.sleep(30)
             log.debug(f"Bridge alive. Connections: {len(self._connections)}")
 
-    async def start(self):
-        # Remove stale socket
+    async def start_tcp(self):
+        """Start TCP server directly (used on both Linux and Windows)."""
+        server = await asyncio.start_server(
+            self.handle_client,
+            TCP_HOST, TCP_PORT,
+        )
+        log.info(f"TCP server listening on {TCP_HOST}:{TCP_PORT}")
+        async with server:
+            await server.serve_forever()
+
+    async def start_unix(self):
+        """Start Unix socket server (Linux only)."""
         if os.path.exists(SOCKET_PATH):
             os.unlink(SOCKET_PATH)
-
-        os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 
         server = await asyncio.start_unix_server(
             self.handle_client,
             path=SOCKET_PATH,
         )
-        os.chmod(SOCKET_PATH, 0o600)  # owner only
+        os.chmod(SOCKET_PATH, 0o600)
 
-        log.info(f"GodotOS Bridge v{VERSION} listening on {SOCKET_PATH}")
-
-        asyncio.create_task(self.ping())
+        log.info(f"Unix socket listening on {SOCKET_PATH}")
 
         async with server:
             await server.serve_forever()
@@ -147,17 +158,25 @@ class BridgeServer:
 
 async def main():
     bridge = BridgeServer()
+    os.makedirs(LOG_DIR, exist_ok=True)
 
     loop = asyncio.get_event_loop()
-    loop.add_signal_handler(signal.SIGTERM, bridge.shutdown)
-    loop.add_signal_handler(signal.SIGINT, bridge.shutdown)
+    if sys.platform != "win32":
+        loop.add_signal_handler(signal.SIGTERM, bridge.shutdown)
+        loop.add_signal_handler(signal.SIGINT, bridge.shutdown)
 
-    # Start Unix socket server AND TCP adapter (for GDScript StreamPeerTCP)
-    from tcp_adapter import start_tcp_adapter
-    await asyncio.gather(
-        bridge.start(),
-        start_tcp_adapter(),
-    )
+    log.info(f"GodotOS Bridge v{VERSION} starting on {sys.platform}")
+
+    if sys.platform == "win32":
+        # Windows: TCP only, no Unix socket
+        await bridge.start_tcp()
+    else:
+        # Linux: Unix socket + TCP adapter concurrently
+        from tcp_adapter import start_tcp_adapter
+        await asyncio.gather(
+            bridge.start_unix(),
+            start_tcp_adapter(),
+        )
 
 
 if __name__ == "__main__":

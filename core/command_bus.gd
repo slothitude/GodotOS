@@ -69,6 +69,14 @@ func _dispatch(id: String, command: Dictionary) -> void:
 			result = _handle_window_command(command)
 		"ai":
 			result = await _handle_ai_command(command)
+		"event":
+			result = _handle_event_command(command)
+		"vfs":
+			result = _handle_vfs_command(command)
+		"app":
+			result = _handle_app_command(command)
+		"input":
+			result = _handle_input_command(command)
 		_:
 			# Try service registry for registered tools
 			var tool = registry.get_tool(command.target)
@@ -118,6 +126,72 @@ func _handle_ai_command(command: Dictionary) -> Dictionary:
 	if not console:
 		return {"error": "AI console not running"}
 	return await console.run_query(command.params.get("prompt", ""), command.params)
+
+
+func _handle_event_command(command: Dictionary) -> Dictionary:
+	var router := Engine.get_singleton("EventRouter") if Engine.has_singleton("EventRouter") else null
+	if not router:
+		return {"error": "EventRouter not available"}
+	match command.action:
+		"emit":
+			router.emit(command.params.get("channel", ""), command.params.get("data"))
+			return {"ok": true}
+		"subscribe":
+			return {"error": "Use EventRouter.subscribe() directly — subscriptions are code-level"}
+		"history":
+			return {"events": router.get_history(command.params.get("limit", 20))}
+		"channels":
+			return {"channels": router.get_channels()}
+		_:
+			return {"error": "Unknown event action: %s" % command.action}
+
+
+func _handle_vfs_command(command: Dictionary) -> Dictionary:
+	var vfs := Engine.get_singleton("VirtualFS") if Engine.has_singleton("VirtualFS") else null
+	if not vfs:
+		return {"error": "VirtualFS not available"}
+	match command.action:
+		"resolve":
+			return {"host_path": vfs.resolve(command.params.get("path", ""))}
+		"virtualize":
+			return {"virtual_path": vfs.virtualize(command.params.get("path", ""))}
+		"mounts":
+			return {"mounts": vfs.get_mounts()}
+		"home":
+			return {"home": vfs.get_home()}
+		_:
+			return {"error": "Unknown VFS action: %s" % command.action}
+
+
+func _handle_app_command(command: Dictionary) -> Dictionary:
+	var launcher := Engine.get_singleton("AppLauncher") if Engine.has_singleton("AppLauncher") else null
+	if not launcher:
+		return {"error": "AppLauncher not available"}
+	match command.action:
+		"launch":
+			var win_id = launcher.launch(command.params.get("app_id", ""), command.params)
+			if win_id == "":
+				return {"error": "Failed to launch app"}
+			return {"ok": true, "window_id": win_id}
+		"close":
+			launcher.close(command.params.get("app_id", ""))
+			return {"ok": true}
+		"list":
+			return {"apps": launcher.list_apps()}
+		_:
+			return {"error": "Unknown app action: %s" % command.action}
+
+
+func _handle_input_command(command: Dictionary) -> Dictionary:
+	var router := Engine.get_singleton("InputRouter") if Engine.has_singleton("InputRouter") else null
+	if not router:
+		return {"error": "InputRouter not available"}
+	match command.action:
+		"focused":
+			return {"window_id": router.get_focused_window_id()}
+		_:
+			return {"error": "Unknown input action: %s" % command.action}
+
 
 func _build_context() -> Dictionary:
 	return {

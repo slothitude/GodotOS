@@ -1,12 +1,23 @@
 extends Node
 ## BridgeClient — TCP client connecting GodotOS to the Python bridge daemon
 ## Protocol: [4-byte LE length][UTF-8 JSON]
+## Auto-reconnects with exponential backoff on disconnect.
 
 var _connected: bool = false
 var _host: String = "127.0.0.1"
 var _port: int = 47625
 var _peer: StreamPeerTCP
 var _sequence: int = 0
+
+# Reconnect state
+var _reconnect_delay: float = 1.0
+var _max_reconnect_delay: float = 30.0
+var _reconnect_timer: float = 0.0
+var _should_reconnect: bool = true
+
+signal bridge_connected
+signal bridge_disconnected
+signal bridge_reconnected
 
 
 func connect_to_bridge() -> void:
@@ -30,7 +41,9 @@ func connect_to_bridge() -> void:
 
 	if _peer.get_status() == StreamPeerTCP.STATUS_CONNECTED:
 		_connected = true
+		_reconnect_delay = 1.0
 		print("[BridgeClient] Connected to bridge at %s:%d" % [_host, _port])
+		bridge_connected.emit()
 	else:
 		print("[BridgeClient] Failed to connect (status: %d) — offline mode" % _peer.get_status())
 		_connected = false
@@ -129,3 +142,41 @@ func _process(_delta: float) -> void:
 		if _peer.get_status() != StreamPeerTCP.STATUS_CONNECTED:
 			_connected = false
 			print("[BridgeClient] Disconnected from bridge")
+			bridge_disconnected.emit()
+			_should_reconnect = true
+			_reconnect_timer = _reconnect_delay
+
+	# Auto-reconnect with exponential backoff
+	if not _connected and _should_reconnect:
+		_reconnect_timer -= _delta
+		if _reconnect_timer <= 0:
+			_attempt_reconnect()
+
+
+func _attempt_reconnect() -> void:
+	if not _peer:
+		_peer = StreamPeerTCP.new()
+
+	var err := _peer.connect_to_host(_host, _port)
+	if err != OK:
+		_reconnect_delay = minf(_reconnect_delay * 2, _max_reconnect_delay)
+		_reconnect_timer = _reconnect_delay
+		return
+
+	# Poll briefly (non-blocking check)
+	for i in range(10):
+		_peer.poll()
+		if _peer.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+			_connected = true
+			_reconnect_delay = 1.0
+			print("[BridgeClient] Reconnected to bridge")
+			bridge_reconnected.emit()
+			# Notify EventRouter
+			if Engine.has_singleton("EventRouter"):
+				Engine.get_singleton("EventRouter").emit("bridge.reconnected", {"host": _host, "port": _port})
+			return
+		elif _peer.get_status() != StreamPeerTCP.STATUS_CONNECTING:
+			break
+
+	_reconnect_delay = minf(_reconnect_delay * 2, _max_reconnect_delay)
+	_reconnect_timer = _reconnect_delay

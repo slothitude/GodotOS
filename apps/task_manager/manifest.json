@@ -1,0 +1,7 @@
+{
+  "id": "task_manager",
+  "name": "Task Manager",
+  "scene": "res://apps/task_manager/task_manager.tscn",
+  "permissions": ["process.list", "process.kill", "system"],
+  "default_size": [600, 500]
+}
