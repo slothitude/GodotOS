@@ -117,7 +117,7 @@ func _on_item_activated(index: int) -> void:
 			# Go up one level
 			var parts := _current_path.split("/")
 			if parts.size() > 1:
-				parts.pop_back()
+				parts.remove_at(parts.size() - 1)
 				var parent := "/".join(parts)
 				if parent == "":
 					parent = "/"
